@@ -1,23 +1,23 @@
 # Flask-туторіал для дітей 12-14 років: сайт-портфоліо з SQLite
 
-У цьому уроці ми зробимо маленький сайт-портфоліо. На ньому буде головна сторінка з картками проєктів, форма для додавання нового проєкту та база даних SQLite, у якій сайт зберігатиме інформацію.
+У цьому уроці ми зробимо невеликий сайт-портфоліо. На сайті буде головна сторінка з картками проєктів, форма для додавання нового проєкту та база даних SQLite, у якій усе зберігатиметься.
 
-SQLite - це маленька база даних, яка живе в одному файлі. Нам не треба встановлювати окремий сервер бази даних. Для першого вебпроєкту це дуже зручно.
+Важлива зміна: HTML і CSS винесені в окремі файли. Так код легше читати в редакторі та в Markdown-перегляді: Python підсвічується як Python, HTML як HTML, а CSS як CSS.
 
 ## Що вийде наприкінці
 
 - Сторінка портфоліо з іменем, коротким описом і списком проєктів.
-- Проєкти зберігаються не в коді, а в базі `portfolio.db`.
+- Проєкти зберігаються в базі `portfolio.db`.
 - Сторінка `/add`, де можна додати новий проєкт через форму.
 - Кнопка видалення проєкту.
-- Один файл `portfolio_app.py`, який запускає сайт.
+- Python-код окремо від HTML і CSS.
 - Файл `run_portfolio.bat`, щоб запустити сайт подвійним кліком у Windows.
 
 ## Що потрібно перед стартом
 
 1. Встановлений Python 3.
 2. Бібліотека Flask.
-3. Трохи цікавості та готовність ламати, лагодити й пробувати знову.
+3. Трохи цікавості та готовність експериментувати.
 
 Якщо Flask ще не встановлений, файл `run_portfolio.bat` спробує встановити його автоматично. Вручну це можна зробити так:
 
@@ -35,43 +35,57 @@ python -m pip install Flask
 http://127.0.0.1:5000
 ```
 
-Коли сайт запуститься вперше, поруч з Python-файлом з'явиться файл `portfolio.db`. Це і є база даних SQLite.
+Коли сайт запуститься вперше, поруч із Python-файлом з'явиться файл `portfolio.db`. Це база даних SQLite.
 
 ## Структура проєкту
 
 ```text
 New project/
   portfolio_app.py
-  run_portfolio.bat
   portfolio.db
+  run_portfolio.bat
   flask_portfolio_tutorial.md
-  output/pdf/flask_portfolio_tutorial.pdf
+  output/
+    pdf/
+      flask_portfolio_tutorial_refactored.pdf
+  static/
+    styles.css
+  templates/
+    base.html
+    index.html
+    add_project.html
 ```
 
-Файл `portfolio.db` створюється автоматично після першого запуску. Якщо його видалити, програма створить нову базу й знову додасть стартові проєкти.
+Пояснення:
 
-## Блок 1. Імпорти
+- `portfolio_app.py` - головний Python-файл із Flask-маршрутами та роботою з базою.
+- `templates/` - папка з HTML-шаблонами.
+- `static/styles.css` - файл зі стилями сайту.
+- `portfolio.db` - база SQLite.
+- `run_portfolio.bat` - запуск сайту у Windows.
+
+## Блок 1. Імпорти в Python
 
 ```python
 from pathlib import Path
 import sqlite3
 
-from flask import Flask, redirect, render_template_string, request, url_for
+from flask import Flask, redirect, render_template, request, url_for
 ```
 
 Пояснення:
 
-- `Path` допомагає зручно працювати з шляхами до файлів.
-- `sqlite3` - вбудований у Python модуль для роботи з SQLite.
-- `Flask` створює вебзастосунок.
-- `request` читає дані, які користувач надсилає через форму.
+- `Path` допомагає працювати з шляхами до файлів.
+- `sqlite3` - вбудований модуль Python для SQLite.
+- `Flask` створює сайт.
+- `request` читає дані з форми.
 - `redirect` переносить користувача на іншу сторінку.
-- `url_for` будує правильні адреси для сторінок.
-- `render_template_string` дозволяє писати HTML-шаблон прямо в Python-файлі.
+- `render_template` відкриває HTML-файли з папки `templates`.
+- `url_for` створює правильні адреси для сторінок і статичних файлів.
 
-У великих проєктах HTML зазвичай кладуть у папку `templates`, але для першого уроку один файл простіший.
+Раніше ми могли писати HTML прямо всередині Python, але це швидко стає незручно. Тому тепер Flask читає HTML з окремих файлів.
 
-## Блок 2. Створюємо Flask-застосунок і шлях до бази
+## Блок 2. Створення застосунку та шлях до бази
 
 ```python
 app = Flask(__name__)
@@ -80,9 +94,9 @@ DATABASE = Path(__file__).with_name("portfolio.db")
 
 Пояснення:
 
-- `app = Flask(__name__)` створює наш сайт.
-- `__name__` допомагає Flask зрозуміти, де знаходиться програма.
-- `DATABASE` означає: створи або відкрий файл `portfolio.db` у тій самій папці, де лежить `portfolio_app.py`.
+- `app = Flask(__name__)` створює Flask-застосунок.
+- `__name__` допомагає Flask знайти папки `templates` і `static`.
+- `DATABASE` вказує, що файл бази `portfolio.db` лежить поруч із `portfolio_app.py`.
 
 ## Блок 3. Підключення до SQLite
 
@@ -95,12 +109,10 @@ def get_connection():
 
 Пояснення:
 
-- `sqlite3.connect(DATABASE)` відкриває з'єднання з базою.
+- `sqlite3.connect(DATABASE)` відкриває базу даних.
 - Якщо файлу бази ще немає, SQLite створить його.
-- `row_factory = sqlite3.Row` дозволяє читати рядки як словники: `project["title"]`.
+- `row_factory = sqlite3.Row` дозволяє читати дані з рядка як зі словника: `project["title"]`.
 - Функція повертає готове підключення.
-
-Можна уявити базу як зошит, а `connection` як відкриту сторінку, на якій ми можемо читати й писати.
 
 ## Блок 4. Створення таблиці
 
@@ -123,17 +135,14 @@ def init_db():
 
 Пояснення:
 
-- `init_db()` готує базу даних до роботи.
-- `CREATE TABLE IF NOT EXISTS` означає: створи таблицю, якщо її ще немає.
-- `projects` - назва таблиці.
-- `id` - унікальний номер кожного проєкту.
+- `init_db()` готує базу до роботи.
+- `CREATE TABLE IF NOT EXISTS` створює таблицю тільки тоді, коли її ще немає.
+- `id` - унікальний номер проєкту.
 - `title` - назва проєкту.
 - `description` - опис.
 - `tech` - технології, наприклад `Python, Flask`.
 - `link` - необов'язкове посилання.
 - `created_at` - час створення запису.
-
-`NOT NULL` означає, що поле обов'язкове. Наприклад, проєкт не може бути без назви.
 
 ## Блок 5. Стартові проєкти
 
@@ -155,14 +164,14 @@ if project_count == 0:
 
 Пояснення:
 
-- `SELECT COUNT(*) FROM projects` рахує, скільки записів уже є в таблиці.
+- `SELECT COUNT(*) FROM projects` рахує записи в таблиці.
 - `fetchone()` бере один результат.
-- `[0]` дістає саме число з результату.
-- Якщо число дорівнює нулю, ми додаємо кілька стартових проєктів.
+- `[0]` дістає число з результату.
+- Якщо записів немає, ми додаємо стартові приклади.
 
 Так сайт не буде порожнім при першому запуску.
 
-## Блок 6. Додавання стартових проєктів у базу
+## Блок 6. Додавання записів у базу
 
 ```python
 connection.executemany(
@@ -177,84 +186,14 @@ connection.commit()
 
 Пояснення:
 
-- `INSERT INTO projects` додає новий рядок у таблицю.
-- `VALUES (?, ?, ?, ?)` - це безпечні місця для значень.
+- `INSERT INTO projects` додає рядок у таблицю.
+- `VALUES (?, ?, ?, ?)` - безпечні місця для значень.
 - `executemany` додає одразу кілька проєктів.
-- `commit()` зберігає зміни в базі.
+- `commit()` зберігає зміни.
 
-Чому ми використовуємо `?`, а не вставляємо текст прямо в SQL? Так безпечніше. Користувач може написати дивний текст у формі, але програма не переплутає його з SQL-командою.
+Знаки `?` важливі: вони захищають SQL-команду від випадкового або небезпечного тексту, який може ввести користувач.
 
-## Блок 7. HTML-шаблон головної сторінки
-
-```python
-PAGE_TEMPLATE = """
-<!doctype html>
-<html lang="uk">
-...
-</html>
-"""
-```
-
-Пояснення:
-
-- Це великий текст із HTML і CSS.
-- HTML відповідає за структуру сторінки.
-- CSS відповідає за вигляд: кольори, відступи, картки, кнопки.
-- Три лапки `"""` дозволяють записати багато рядків тексту в одну змінну.
-
-У шаблоні є спеціальні частини Flask/Jinja:
-
-```html
-{% for project in projects %}
-    <article class="card">
-        <h3>{{ project["title"] }}</h3>
-    </article>
-{% endfor %}
-```
-
-Пояснення:
-
-- `{% for project in projects %}` запускає цикл.
-- Цикл проходить по всіх проєктах із бази.
-- `{{ project["title"] }}` вставляє назву проєкту в HTML.
-- `{% endfor %}` завершує цикл.
-
-Це схоже на Python-цикл `for`, але написаний у HTML-шаблоні.
-
-## Блок 8. Шаблон форми
-
-```python
-FORM_TEMPLATE = """
-<!doctype html>
-<html lang="uk">
-...
-<form method="post">
-...
-</form>
-</html>
-"""
-```
-
-Пояснення:
-
-- Цей шаблон показує форму додавання проєкту.
-- `method="post"` означає, що форма надсилає дані на сервер.
-- Поля `name="title"`, `name="description"`, `name="tech"` потрібні, щоб Flask міг прочитати введені значення.
-
-Приклад поля:
-
-```html
-<input id="title" name="title" value="{{ form.title }}" required>
-```
-
-Пояснення:
-
-- `id="title"` пов'язує поле з підписом `label`.
-- `name="title"` - ім'я, за яким Flask знайде значення.
-- `value="{{ form.title }}"` повертає введений текст назад у форму, якщо сталася помилка.
-- `required` просить браузер не надсилати порожнє поле.
-
-## Блок 9. Головний маршрут `/`
+## Блок 7. Головна сторінка `/`
 
 ```python
 @app.route("/")
@@ -268,21 +207,18 @@ def home():
             """
         ).fetchall()
 
-    return render_template_string(PAGE_TEMPLATE, projects=projects)
+    return render_template("index.html", projects=projects)
 ```
 
 Пояснення:
 
-- `@app.route("/")` каже Flask: ця функція відповідає за головну сторінку.
+- `@app.route("/")` каже Flask, що ця функція відповідає за головну сторінку.
 - `SELECT ... FROM projects` бере проєкти з бази.
 - `ORDER BY id DESC` показує новіші проєкти першими.
 - `fetchall()` забирає всі знайдені рядки.
-- `render_template_string` перетворює HTML-шаблон на готову сторінку.
-- `projects=projects` передає список проєктів у шаблон.
+- `render_template("index.html", projects=projects)` відкриває файл `templates/index.html` і передає туди проєкти.
 
-Коли ти відкриваєш `http://127.0.0.1:5000`, Flask викликає саме цю функцію.
-
-## Блок 10. Маршрут `/add`: показ форми й обробка даних
+## Блок 8. Сторінка додавання `/add`
 
 ```python
 @app.route("/add", methods=["GET", "POST"])
@@ -299,11 +235,11 @@ def add_project():
 
 - `/add` - сторінка додавання нового проєкту.
 - `methods=["GET", "POST"]` означає, що сторінка працює у двох режимах.
-- `GET` - просто показати форму.
-- `POST` - отримати дані з форми й записати їх у базу.
+- `GET` просто показує форму.
+- `POST` отримує дані з форми.
 - `form` зберігає значення полів.
 
-## Блок 11. Читання даних із форми
+## Блок 9. Читання форми
 
 ```python
 if request.method == "POST":
@@ -320,14 +256,14 @@ if request.method == "POST":
 - `request.method == "POST"` перевіряє, чи користувач натиснув кнопку збереження.
 - `request.form.get("title", "")` бере значення поля `title`.
 - `strip()` прибирає зайві пробіли на початку й у кінці.
-- Якщо поле не знайдено, Flask поверне порожній рядок `""`.
+- Якщо поле не знайдено, Flask поверне порожній рядок.
 
-## Блок 12. Перевірка обов'язкових полів
+## Блок 10. Перевірка обов'язкових полів
 
 ```python
 if not form["title"] or not form["description"] or not form["tech"]:
-    return render_template_string(
-        FORM_TEMPLATE,
+    return render_template(
+        "add_project.html",
         form=form,
         error="Заповни назву, опис і технології.",
     )
@@ -335,13 +271,13 @@ if not form["title"] or not form["description"] or not form["tech"]:
 
 Пояснення:
 
-- Ми перевіряємо, чи не порожні назва, опис і технології.
-- Якщо щось порожнє, повертаємо форму назад.
-- `error` передає повідомлення про помилку в шаблон.
+- Назва, опис і технології обов'язкові.
+- Якщо чогось немає, ми знову показуємо форму.
+- `error` передає повідомлення про помилку в HTML-шаблон.
 
-Це називається валідація. Валідація допомагає не записувати в базу неповні дані.
+Це називається валідація. Вона допомагає не записувати в базу неповні дані.
 
-## Блок 13. Запис нового проєкту
+## Блок 11. Запис нового проєкту
 
 ```python
 with get_connection() as connection:
@@ -364,15 +300,13 @@ return redirect(url_for("home"))
 
 Пояснення:
 
-- Відкриваємо підключення до бази.
-- Виконуємо `INSERT INTO`, щоб додати новий проєкт.
-- Передаємо значення через кортеж.
+- Відкриваємо базу.
+- Додаємо новий проєкт через `INSERT INTO`.
+- Передаємо значення окремо від SQL-команди.
 - `commit()` зберігає зміни.
 - `redirect(url_for("home"))` повертає користувача на головну сторінку.
 
-Після цього новий проєкт уже видно в портфоліо.
-
-## Блок 14. Видалення проєкту
+## Блок 12. Видалення проєкту
 
 ```python
 @app.route("/delete/<int:project_id>", methods=["POST"])
@@ -386,15 +320,12 @@ def delete_project(project_id):
 
 Пояснення:
 
-- `/delete/<int:project_id>` означає: у посиланні буде номер проєкту.
-- `<int:project_id>` каже Flask, що це має бути ціле число.
+- `<int:project_id>` означає, що Flask чекає число в адресі.
 - `DELETE FROM projects WHERE id = ?` видаляє тільки один конкретний проєкт.
 - `(project_id,)` - кортеж з одним значенням. Кома тут важлива.
 - Після видалення повертаємося на головну сторінку.
 
-Ми використовуємо `POST`, бо видалення змінює дані. Це хороша звичка для веброзробки.
-
-## Блок 15. Запуск програми
+## Блок 13. Запуск сайту
 
 ```python
 init_db()
@@ -405,12 +336,171 @@ if __name__ == "__main__":
 
 Пояснення:
 
-- `init_db()` створює базу й таблицю до запуску сайту.
-- `if __name__ == "__main__":` означає: запускай сервер тільки тоді, коли файл відкрили напряму.
+- `init_db()` створює таблицю до запуску сайту.
+- `if __name__ == "__main__":` запускає сервер тільки тоді, коли файл відкрили напряму.
 - `app.run(debug=True)` запускає локальний сервер Flask.
 - `debug=True` показує корисні помилки під час навчання.
 
 Для справжнього сайту в інтернеті `debug=True` вимикають, але для навчання він дуже зручний.
+
+## Блок 14. Базовий HTML-шаблон
+
+Файл `templates/base.html` містить спільну основу сторінок.
+
+```html
+<!doctype html>
+<html lang="uk">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Моє портфоліо{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    {% block body %}{% endblock %}
+</body>
+</html>
+```
+
+Пояснення:
+
+- `base.html` - основа, яку можуть використовувати інші сторінки.
+- `{% block title %}` - місце, де сторінка може поставити свій заголовок.
+- `url_for('static', filename='styles.css')` підключає CSS із папки `static`.
+- `{% block body %}` - місце для головного вмісту сторінки.
+
+## Блок 15. HTML головної сторінки
+
+Файл `templates/index.html` показує проєкти.
+
+```html
+{% extends "base.html" %}
+
+{% block title %}Моє портфоліо{% endblock %}
+
+{% block body %}
+    <header>
+        <div class="wrap hero">
+            <div>
+                <h1>Привіт, я Марко</h1>
+                <p class="lead">
+                    Це моє навчальне портфоліо. Тут зберігаються проєкти,
+                    які я створюю під час вивчення Python, Flask та SQLite.
+                </p>
+            </div>
+            <div class="avatar" aria-label="Аватар">M</div>
+        </div>
+    </header>
+{% endblock %}
+```
+
+Пояснення:
+
+- `{% extends "base.html" %}` означає, що сторінка бере основу з `base.html`.
+- `{% block body %}` заповнює головну частину сторінки.
+- `header` - верхній блок із привітанням.
+- `class="wrap hero"` підключає CSS-стилі з файлу `styles.css`.
+
+У цьому ж файлі є цикл для проєктів:
+
+```html
+{% for project in projects %}
+    <article class="card">
+        <h3>{{ project["title"] }}</h3>
+        <p class="description">{{ project["description"] }}</p>
+        <span class="tag">{{ project["tech"] }}</span>
+    </article>
+{% endfor %}
+```
+
+Пояснення:
+
+- `{% for project in projects %}` проходить по всіх проєктах із бази.
+- `{{ project["title"] }}` вставляє назву проєкту.
+- `{% endfor %}` завершує цикл.
+
+## Блок 16. HTML форми
+
+Файл `templates/add_project.html` показує форму.
+
+```html
+{% extends "base.html" %}
+
+{% block title %}Додати проєкт{% endblock %}
+
+{% block body %}
+    <main class="wrap form-page">
+        <h1>Додати новий проєкт</h1>
+        <div class="form-panel">
+            {% if error %}
+                <div class="error">{{ error }}</div>
+            {% endif %}
+
+            <form method="post">
+                <div class="field">
+                    <label for="title">Назва</label>
+                    <input id="title" name="title" value="{{ form.title }}" required>
+                </div>
+            </form>
+        </div>
+    </main>
+{% endblock %}
+```
+
+Пояснення:
+
+- `method="post"` надсилає дані на сервер.
+- `name="title"` - ім'я поля, за яким Flask читає значення.
+- `value="{{ form.title }}"` повертає текст у поле, якщо сталася помилка.
+- `{% if error %}` показує помилку тільки тоді, коли вона є.
+
+## Блок 17. CSS-стилі
+
+Файл `static/styles.css` відповідає за вигляд сайту.
+
+```css
+:root {
+    color-scheme: light;
+    --bg: #f5f7fb;
+    --panel: #ffffff;
+    --ink: #1f2937;
+    --accent: #2563eb;
+    --danger: #dc2626;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+}
+```
+
+Пояснення:
+
+- `:root` зберігає кольори в змінних CSS.
+- `--bg`, `--panel`, `--accent` - назви кольорів, які можна використовувати далі.
+- `body` задає головний шрифт, колір тексту й фон.
+
+Приклад стилю карток:
+
+```css
+.card,
+.form-panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
+}
+```
+
+Пояснення:
+
+- `.card` стилізує картку проєкту.
+- `.form-panel` стилізує блок форми.
+- `border-radius: 8px` робить кути трохи округлими.
+- `box-shadow` додає легку тінь.
 
 ## Як перевірити, що SQLite працює
 
@@ -435,7 +525,7 @@ if __name__ == "__main__":
 from pathlib import Path
 import sqlite3
 
-from flask import Flask, redirect, render_template_string, request, url_for
+from flask import Flask, redirect, render_template, request, url_for
 
 
 app = Flask(__name__)
@@ -499,220 +589,105 @@ def init_db():
         connection.commit()
 
 
-PAGE_TEMPLATE = """
+@app.route("/")
+def home():
+    with get_connection() as connection:
+        projects = connection.execute(
+            """
+            SELECT id, title, description, tech, link
+            FROM projects
+            ORDER BY id DESC
+            """
+        ).fetchall()
+
+    return render_template("index.html", projects=projects)
+
+
+@app.route("/add", methods=["GET", "POST"])
+def add_project():
+    form = {
+        "title": "",
+        "description": "",
+        "tech": "",
+        "link": "",
+    }
+
+    if request.method == "POST":
+        form = {
+            "title": request.form.get("title", "").strip(),
+            "description": request.form.get("description", "").strip(),
+            "tech": request.form.get("tech", "").strip(),
+            "link": request.form.get("link", "").strip(),
+        }
+
+        if not form["title"] or not form["description"] or not form["tech"]:
+            return render_template(
+                "add_project.html",
+                form=form,
+                error="Заповни назву, опис і технології.",
+            )
+
+        with get_connection() as connection:
+            connection.execute(
+                """
+                INSERT INTO projects (title, description, tech, link)
+                VALUES (?, ?, ?, ?)
+                """,
+                (
+                    form["title"],
+                    form["description"],
+                    form["tech"],
+                    form["link"],
+                ),
+            )
+            connection.commit()
+
+        return redirect(url_for("home"))
+
+    return render_template("add_project.html", form=form, error="")
+
+
+@app.route("/delete/<int:project_id>", methods=["POST"])
+def delete_project(project_id):
+    with get_connection() as connection:
+        connection.execute("DELETE FROM projects WHERE id = ?", (project_id,))
+        connection.commit()
+
+    return redirect(url_for("home"))
+
+
+init_db()
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
+```
+
+## Повний код `templates/base.html`
+
+```html
 <!doctype html>
 <html lang="uk">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Моє портфоліо</title>
-    <style>
-        :root {
-            color-scheme: light;
-            --bg: #f5f7fb;
-            --panel: #ffffff;
-            --ink: #1f2937;
-            --muted: #64748b;
-            --accent: #2563eb;
-            --accent-dark: #1d4ed8;
-            --line: #dbe4f0;
-            --success: #16a34a;
-            --danger: #dc2626;
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            color: var(--ink);
-            background: var(--bg);
-        }
-
-        header {
-            background: #111827;
-            color: white;
-            padding: 48px 20px;
-        }
-
-        .wrap {
-            width: min(980px, calc(100% - 32px));
-            margin: 0 auto;
-        }
-
-        .hero {
-            display: grid;
-            grid-template-columns: 1fr auto;
-            gap: 24px;
-            align-items: center;
-        }
-
-        .avatar {
-            width: 116px;
-            height: 116px;
-            border-radius: 50%;
-            display: grid;
-            place-items: center;
-            background: #f59e0b;
-            color: #111827;
-            font-size: 46px;
-            font-weight: 700;
-            border: 4px solid rgba(255, 255, 255, 0.55);
-        }
-
-        h1, h2, h3, p {
-            margin-top: 0;
-        }
-
-        h1 {
-            font-size: clamp(32px, 5vw, 58px);
-            margin-bottom: 12px;
-        }
-
-        .lead {
-            max-width: 680px;
-            color: #d1d5db;
-            font-size: 18px;
-            line-height: 1.6;
-            margin-bottom: 0;
-        }
-
-        main {
-            padding: 32px 0 56px;
-        }
-
-        .toolbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 16px;
-            margin-bottom: 20px;
-        }
-
-        .button {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 42px;
-            padding: 0 16px;
-            border-radius: 8px;
-            border: 0;
-            background: var(--accent);
-            color: white;
-            font-weight: 700;
-            text-decoration: none;
-            cursor: pointer;
-        }
-
-        .button:hover {
-            background: var(--accent-dark);
-        }
-
-        .button.secondary {
-            background: #e2e8f0;
-            color: #0f172a;
-        }
-
-        .button.danger {
-            background: var(--danger);
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 16px;
-        }
-
-        .card, .form-panel {
-            background: var(--panel);
-            border: 1px solid var(--line);
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
-        }
-
-        .card h3 {
-            margin-bottom: 10px;
-        }
-
-        .description {
-            color: var(--muted);
-            line-height: 1.55;
-        }
-
-        .tag {
-            display: inline-block;
-            margin: 8px 0 16px;
-            padding: 6px 10px;
-            border-radius: 999px;
-            background: #e0f2fe;
-            color: #075985;
-            font-size: 14px;
-            font-weight: 700;
-        }
-
-        .actions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 6px;
-            font-weight: 700;
-        }
-
-        input, textarea {
-            width: 100%;
-            border: 1px solid var(--line);
-            border-radius: 8px;
-            padding: 12px;
-            font: inherit;
-            color: var(--ink);
-            background: white;
-        }
-
-        textarea {
-            min-height: 120px;
-            resize: vertical;
-        }
-
-        .field {
-            margin-bottom: 16px;
-        }
-
-        .error {
-            padding: 12px 14px;
-            border-radius: 8px;
-            background: #fee2e2;
-            color: #991b1b;
-            margin-bottom: 18px;
-        }
-
-        footer {
-            color: var(--muted);
-            padding: 24px 0;
-            border-top: 1px solid var(--line);
-        }
-
-        @media (max-width: 640px) {
-            .hero, .toolbar {
-                grid-template-columns: 1fr;
-                display: grid;
-            }
-
-            .avatar {
-                width: 92px;
-                height: 92px;
-                font-size: 36px;
-            }
-        }
-    </style>
+    <title>{% block title %}Моє портфоліо{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
+    {% block body %}{% endblock %}
+</body>
+</html>
+```
+
+## Повний код `templates/index.html`
+
+```html
+{% extends "base.html" %}
+
+{% block title %}Моє портфоліо{% endblock %}
+
+{% block body %}
     <header>
         <div class="wrap hero">
             <div>
@@ -759,99 +734,18 @@ PAGE_TEMPLATE = """
     <footer>
         <div class="wrap">Зроблено на Flask + SQLite.</div>
     </footer>
-</body>
-</html>
-"""
+{% endblock %}
+```
 
+## Повний код `templates/add_project.html`
 
-FORM_TEMPLATE = """
-<!doctype html>
-<html lang="uk">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Додати проєкт</title>
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            color: #1f2937;
-            background: #f5f7fb;
-        }
+```html
+{% extends "base.html" %}
 
-        main {
-            width: min(720px, calc(100% - 32px));
-            margin: 40px auto;
-        }
+{% block title %}Додати проєкт{% endblock %}
 
-        .form-panel {
-            background: white;
-            border: 1px solid #dbe4f0;
-            border-radius: 8px;
-            padding: 22px;
-            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
-        }
-
-        label {
-            display: block;
-            margin-bottom: 6px;
-            font-weight: 700;
-        }
-
-        input, textarea {
-            width: 100%;
-            border: 1px solid #dbe4f0;
-            border-radius: 8px;
-            padding: 12px;
-            font: inherit;
-            box-sizing: border-box;
-        }
-
-        textarea {
-            min-height: 130px;
-            resize: vertical;
-        }
-
-        .field {
-            margin-bottom: 16px;
-        }
-
-        .actions {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .button {
-            min-height: 42px;
-            padding: 0 16px;
-            border-radius: 8px;
-            border: 0;
-            background: #2563eb;
-            color: white;
-            font-weight: 700;
-            text-decoration: none;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-        }
-
-        .button.secondary {
-            background: #e2e8f0;
-            color: #0f172a;
-        }
-
-        .error {
-            padding: 12px 14px;
-            border-radius: 8px;
-            background: #fee2e2;
-            color: #991b1b;
-            margin-bottom: 18px;
-        }
-    </style>
-</head>
-<body>
-    <main>
+{% block body %}
+    <main class="wrap form-page">
         <h1>Додати новий проєкт</h1>
         <div class="form-panel">
             {% if error %}
@@ -886,83 +780,224 @@ FORM_TEMPLATE = """
             </form>
         </div>
     </main>
-</body>
-</html>
-"""
+{% endblock %}
+```
 
+## Повний код `static/styles.css`
 
-@app.route("/")
-def home():
-    with get_connection() as connection:
-        projects = connection.execute(
-            """
-            SELECT id, title, description, tech, link
-            FROM projects
-            ORDER BY id DESC
-            """
-        ).fetchall()
+```css
+:root {
+    color-scheme: light;
+    --bg: #f5f7fb;
+    --panel: #ffffff;
+    --ink: #1f2937;
+    --muted: #64748b;
+    --accent: #2563eb;
+    --accent-dark: #1d4ed8;
+    --line: #dbe4f0;
+    --danger: #dc2626;
+}
 
-    return render_template_string(PAGE_TEMPLATE, projects=projects)
+* {
+    box-sizing: border-box;
+}
 
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+}
 
-@app.route("/add", methods=["GET", "POST"])
-def add_project():
-    form = {
-        "title": "",
-        "description": "",
-        "tech": "",
-        "link": "",
+header {
+    background: #111827;
+    color: white;
+    padding: 48px 20px;
+}
+
+.wrap {
+    width: min(980px, calc(100% - 32px));
+    margin: 0 auto;
+}
+
+.hero {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    align-items: center;
+}
+
+.avatar {
+    width: 116px;
+    height: 116px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: #f59e0b;
+    color: #111827;
+    font-size: 46px;
+    font-weight: 700;
+    border: 4px solid rgba(255, 255, 255, 0.55);
+}
+
+h1,
+h2,
+h3,
+p {
+    margin-top: 0;
+}
+
+h1 {
+    font-size: clamp(32px, 5vw, 58px);
+    margin-bottom: 12px;
+}
+
+.lead {
+    max-width: 680px;
+    color: #d1d5db;
+    font-size: 18px;
+    line-height: 1.6;
+    margin-bottom: 0;
+}
+
+main {
+    padding: 32px 0 56px;
+}
+
+.form-page {
+    max-width: 720px;
+}
+
+.toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 0 16px;
+    border-radius: 8px;
+    border: 0;
+    background: var(--accent);
+    color: white;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.button:hover {
+    background: var(--accent-dark);
+}
+
+.button.secondary {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+.button.danger {
+    background: var(--danger);
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+}
+
+.card,
+.form-panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
+}
+
+.card h3 {
+    margin-bottom: 10px;
+}
+
+.description {
+    color: var(--muted);
+    line-height: 1.55;
+}
+
+.tag {
+    display: inline-block;
+    margin: 8px 0 16px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #e0f2fe;
+    color: #075985;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 700;
+}
+
+input,
+textarea {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px;
+    font: inherit;
+    color: var(--ink);
+    background: white;
+}
+
+textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.field {
+    margin-bottom: 16px;
+}
+
+.error {
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: #fee2e2;
+    color: #991b1b;
+    margin-bottom: 18px;
+}
+
+footer {
+    color: var(--muted);
+    padding: 24px 0;
+    border-top: 1px solid var(--line);
+}
+
+@media (max-width: 640px) {
+    .hero,
+    .toolbar {
+        grid-template-columns: 1fr;
+        display: grid;
     }
 
-    if request.method == "POST":
-        form = {
-            "title": request.form.get("title", "").strip(),
-            "description": request.form.get("description", "").strip(),
-            "tech": request.form.get("tech", "").strip(),
-            "link": request.form.get("link", "").strip(),
-        }
-
-        if not form["title"] or not form["description"] or not form["tech"]:
-            return render_template_string(
-                FORM_TEMPLATE,
-                form=form,
-                error="Заповни назву, опис і технології.",
-            )
-
-        with get_connection() as connection:
-            connection.execute(
-                """
-                INSERT INTO projects (title, description, tech, link)
-                VALUES (?, ?, ?, ?)
-                """,
-                (
-                    form["title"],
-                    form["description"],
-                    form["tech"],
-                    form["link"],
-                ),
-            )
-            connection.commit()
-
-        return redirect(url_for("home"))
-
-    return render_template_string(FORM_TEMPLATE, form=form, error="")
-
-
-@app.route("/delete/<int:project_id>", methods=["POST"])
-def delete_project(project_id):
-    with get_connection() as connection:
-        connection.execute("DELETE FROM projects WHERE id = ?", (project_id,))
-        connection.commit()
-
-    return redirect(url_for("home"))
-
-
-init_db()
-
-
-if __name__ == "__main__":
-    app.run(debug=True)
+    .avatar {
+        width: 92px;
+        height: 92px;
+        font-size: 36px;
+    }
+}
 ```
 
 ## Повний код `run_portfolio.bat`

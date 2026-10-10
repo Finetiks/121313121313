@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Додати проєкт{% endblock %}
+
+{% block body %}
+    <main class="wrap form-page">
+        <h1>Додати новий проєкт</h1>
+        <div class="form-panel">
+            {% if error %}
+                <div class="error">{{ error }}</div>
+            {% endif %}
+
+            <form method="post">
+                <div class="field">
+                    <label for="title">Назва</label>
+                    <input id="title" name="title" value="{{ form.title }}" required>
+                </div>
+
+                <div class="field">
+                    <label for="description">Опис</label>
+                    <textarea id="description" name="description" required>{{ form.description }}</textarea>
+                </div>
+
+                <div class="field">
+                    <label for="tech">Технології</label>
+                    <input id="tech" name="tech" value="{{ form.tech }}" placeholder="Наприклад: Flask, SQLite" required>
+                </div>
+
+                <div class="field">
+                    <label for="link">Посилання (необов'язково)</label>
+                    <input id="link" name="link" value="{{ form.link }}" placeholder="https://example.com">
+                </div>
+
+                <div class="actions">
+                    <button class="button" type="submit">Зберегти</button>
+                    <a class="button secondary" href="{{ url_for('home') }}">Назад</a>
+                </div>
+            </form>
+        </div>
+    </main>
+{% endblock %}

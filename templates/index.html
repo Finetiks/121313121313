@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Моє портфоліо{% endblock %}
+
+{% block body %}
+    <header>
+        <div class="wrap hero">
+            <div>
+                <h1>Привіт, я Марко</h1>
+                <p class="lead">
+                    Це моє навчальне портфоліо. Тут зберігаються проєкти,
+                    які я створюю під час вивчення Python, Flask та SQLite.
+                </p>
+            </div>
+            <div class="avatar" aria-label="Аватар">M</div>
+        </div>
+    </header>
+
+    <main class="wrap">
+        <section class="toolbar">
+            <div>
+                <h2>Мої проєкти</h2>
+                <p class="description">Картки нижче завантажуються з бази даних SQLite.</p>
+            </div>
+            <a class="button" href="{{ url_for('add_project') }}">Додати проєкт</a>
+        </section>
+
+        <section class="grid">
+            {% for project in projects %}
+                <article class="card">
+                    <h3>{{ project["title"] }}</h3>
+                    <p class="description">{{ project["description"] }}</p>
+                    <span class="tag">{{ project["tech"] }}</span>
+                    <div class="actions">
+                        {% if project["link"] %}
+                            <a class="button secondary" href="{{ project["link"] }}" target="_blank" rel="noreferrer">
+                                Відкрити
+                            </a>
+                        {% endif %}
+                        <form action="{{ url_for('delete_project', project_id=project["id"]) }}" method="post">
+                            <button class="button danger" type="submit">Видалити</button>
+                        </form>
+                    </div>
+                </article>
+            {% endfor %}
+        </section>
+    </main>
+
+    <footer>
+        <div class="wrap">Зроблено на Flask + SQLite.</div>
+    </footer>
+{% endblock %}
